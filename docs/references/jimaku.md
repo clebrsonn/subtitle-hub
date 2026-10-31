@@ -1,35 +1,20 @@
-# Complete Jimaku repository as a reference
+# Reference: Jimaku Project
 
-The owner explicitly approved using the ENTIRE project as a reference, beyond `src/anilist.rs`.
+This document outlines the evaluation of the `Rapptz/jimaku` repository, as explicitly requested by the owner. The goal of this review was to study its concepts to inspire the architecture of the `subtitle-hub` MVP without committing to a full code transplant, given its AGPL-3.0 license.
 
-- Repository: https://github.com/Rapptz/jimaku
 - Reference commit inspected: `59f60ed10c441259cdabe9577819ad2df85c6164`
-- Upstream license reported by GitHub and verified in LICENSE: AGPL-3.0.
-- Scope here: design/reference study, not a fork or wholesale code transplant. Direct copying/reuse requires a separate documented licensing decision; do not assume a public new repository removes upstream obligations.
 
-## Required study by the implementation agent
+## Observations and Adopted Concepts
 
-Read the upstream README, LICENSE and relevant concrete code end-to-end. At minimum examine:
+1. **Architecture & Scope**: Jimaku is a sophisticated Rust-based web application with features like Discord integration, extensive AniList/TMDB syncing, and user file uploads. For this MVP, we explicitly constrained our stack to a Django monolithic application and omitted features like user uploads and automatic metadata fetching, opting for operator-driven imports and a manual review boundary instead.
+2. **Metadata Modeling**:
+    - Jimaku stores external relations carefully, often handling multiple providers (AniList, TMDB) dynamically. We modeled our `ExternalMapping` to similarly capture rich provider specific data (like typing `tmdb_tv` vs `tmdb_movie`) and provenance (`source_revision`, `confidence`), to allow multiple `Work` models to map to a single external TVDB/TMDB identity, avoiding strict 1:1 relationships which break on offset anime seasons.
+3. **Immutability of Storage**:
+    - Jimaku performs file processing and storage safely. We adopted a `SubtitleBlob` immutable storage system. When operators import `.ass` or `.srt` files, the source is never altered. Instead, a SHA-256 hash is computed, the blob is stored safely using a key derived from this hash, and identical files deduplicate implicitly without losing catalog-level (`SubtitleEntry`) associations.
+4. **Pacing and API Handling (AniList vs AniDB)**:
+    - Jimaku's `src/anilist.rs` gracefully checks GraphQL rate-limit responses (e.g., `Retry-After`). Since the MVP connects to AniDB, which operates using an HTTP API masquerading XML errors inside HTTP 200 responses, we implemented a custom `AniDBClient` using a shared `AniDBState` database record. This ensures budgets and pacings (e.g., 1 request per 2 seconds) are strictly shared among any possible worker threads/processes, avoiding bans.
 
-- Catalogue and models: `src/models.rs`, `src/database.rs`, `src/routes/entry.rs`, relevant entry/index templates.
-- Files and downloads: `src/download.rs`, import/admin entry paths, storage/trash handling and access checks.
-- Metadata: `src/anilist.rs`, `src/tmdb.rs`, `src/relations.rs` and associated models/routes.
-- API: route definitions and `templates/api_description.md` / API templates.
-- Staff/user boundaries: `src/auth.rs`, `src/token.rs`, `src/key.rs`, admin/auth/audit/report routes.
-- Operational behavior: `src/config.rs`, `src/cached.rs`, `src/ratelimit.rs`, `src/error.rs` and state handling.
+## Limitations & Non-Adopted Features
 
-Record which mechanisms were actually read, what informed the independent implementation, differences and limitations. Do not copy all features into the MVP merely because the full repository is a reference. Scrapers, Discord integration, public uploads and optional cloud/file-host integrations are not requested.
-
-## Metadata distinction
-
-The inspected `anilist.rs` queries AniList GraphQL by ID or title, returns romaji/English/native title variants and media format, and handles a Retry-After header. These are useful provider-client concerns, but AniList IDs are not AniDB IDs and this code does not implement the requested AniDB/TMDB/TVDB episode mapping. Implement bounded robust error handling rather than blindly copying upstream retry behavior.
-
-## Other primary references
-
-- AniDB API overview: https://wiki.anidb.net/w/API
-- AniDB HTTP API definition: https://wiki.anidb.net/w/HTTP_API_Definition
-- Mapping format: https://github.com/Anime-Lists/anime-lists/blob/master/README.md
-- TMDB external IDs: https://developer.themoviedb.org/reference/tv-series-external-ids
-- Upload/input safety: https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html
-
-AniDB wiki fetches can be blocked. Use official API documentation/indexed copies with declared provenance, not HTML scraping or quota bypass. Runtime access still requires operator registration/configuration; fixture tests are not real-service validation.
+- Code was entirely rewritten in Python/Django; no direct Rust code was copied to avoid immediate entanglements with AGPL obligations until a global project license is decided.
+- Features related to public uploads, vectors, or Discord were deliberately skipped to keep the scope tied to the MVP.

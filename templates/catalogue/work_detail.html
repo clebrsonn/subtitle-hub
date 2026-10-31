@@ -1,0 +1,8 @@
+<h1>{{ work.title }}</h1>
+<ul>
+{% for entry in entries %}
+  <li>{{ entry.original_filename }} - <a href="/download/{{ entry.id }}/">Download</a></li>
+{% empty %}
+  <li>No published subtitles.</li>
+{% endfor %}
+</ul>
