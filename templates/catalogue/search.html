@@ -1,0 +1,8 @@
+<h1>Search Results</h1>
+<ul>
+{% for work in works %}
+  <li><a href="/work/{{ work.id }}/">{{ work.title }}</a></li>
+{% empty %}
+  <li>No results found.</li>
+{% endfor %}
+</ul>
