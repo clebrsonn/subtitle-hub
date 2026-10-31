@@ -1,0 +1,31 @@
+# Credentials and operator data
+.env
+.env.*
+!.env.example
+*.private
+*.pem
+*.key
+/imports/
+/import-data/
+/managed-files/
+/media/
+/backups/
+/operator-config/
+*.sqlite3
+*.db
+# Python and tooling
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+# Build/runtime output
+/dist/
+/build/
+/staticfiles/
+*.log
+.DS_Store
